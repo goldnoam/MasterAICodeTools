@@ -13,12 +13,62 @@ interface Props {
   tutorial: ToolTutorial;
   ui: TranslationStrings;
   relatedTools: RelatedTool[];
+  isLoading?: boolean;
 }
 
 // Helper to escape regex characters
 const escapeRegExp = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
+
+// --- Syntax Highlighting Helpers ---
+
+const KEYWORDS = [
+  // JS/TS
+  "const", "let", "var", "function", "return", "import", "from", "class", "export", 
+  "async", "await", "if", "else", "try", "catch", "new", "interface", "type", 
+  "extends", "implements", "true", "false", "null", "undefined", "void", "public", "private",
+  // Python
+  "def", "elif", "print", "None", "True", "False", "with", "as", "lambda", "global", "nonlocal", "pass", "break", "continue"
+];
+
+// Regex updated to handle // (JS) and # (Python/Bash) comments
+const SYNTAX_REGEX = /((?:\/\/.*$|#.*$)|(?:"(?:[^"\\]|\\.)*")|(?:'(?:[^'\\]|\\.)*')|(?:`(?:[^`\\]|\\.)*`)|\b\d+\b|\b(?:const|let|var|function|return|import|from|class|export|async|await|if|else|try|catch|new|interface|type|extends|implements|true|false|null|undefined|void|public|private|def|elif|print|None|True|False|with|as|lambda|global|nonlocal|pass|break|continue)\b)/gm;
+
+const SyntaxHighlight: React.FC<{ text: string }> = ({ text }) => {
+  // Split by regex capturing groups to keep separators
+  const parts = text.split(SYNTAX_REGEX);
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (!part) return null;
+
+        // Comment (JS or Python/Bash)
+        if (part.startsWith('//') || part.trim().startsWith('#')) {
+          return <span key={i} className="text-green-600 dark:text-green-400 italic">{part}</span>;
+        }
+        // String
+        if (part.startsWith('"') || part.startsWith("'") || part.startsWith('`')) {
+          return <span key={i} className="text-amber-600 dark:text-amber-300">{part}</span>;
+        }
+        // Number
+        if (/^\d+$/.test(part)) {
+           return <span key={i} className="text-emerald-600 dark:text-emerald-300">{part}</span>;
+        }
+        // Keyword
+        if (KEYWORDS.includes(part)) {
+          return <span key={i} className="text-purple-600 dark:text-pink-400 font-semibold">{part}</span>;
+        }
+
+        // Default Text
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+};
+
+// --- Tooltips ---
 
 // Sub-component for individual terms to handle smart positioning
 const TooltipTerm: React.FC<{ term: string; definition: string }> = ({ term, definition }) => {
@@ -100,15 +150,15 @@ const TooltipTerm: React.FC<{ term: string; definition: string }> = ({ term, def
       className="relative group inline-block"
       onMouseEnter={handleMouseEnter}
     >
-      <span className="cursor-help text-purple-300 font-bold border-b border-dotted border-purple-500/50 hover:text-white hover:border-purple-400 transition-colors">
+      <span className="cursor-help text-blue-600 dark:text-blue-300 font-bold border-b border-dotted border-blue-500/50 hover:text-blue-800 dark:hover:text-white hover:border-blue-400 transition-colors">
         {term}
       </span>
       
       {/* Enhanced Tooltip */}
       <div className={`${getPositionClasses()} opacity-0 invisible group-hover:opacity-100 group-hover:visible scale-95 group-hover:scale-100`}>
-        <div className="relative bg-slate-900/95 backdrop-blur-md rounded-xl shadow-2xl border border-purple-500/30 overflow-hidden text-left">
-          <div className="bg-purple-900/20 px-4 py-2 border-b border-white/5">
-              <span className="font-bold text-purple-300 text-sm block">{term}</span>
+        <div className="relative bg-slate-900/95 backdrop-blur-md rounded-xl shadow-2xl border border-blue-500/30 overflow-hidden text-left">
+          <div className="bg-blue-900/20 px-4 py-2 border-b border-white/5">
+              <span className="font-bold text-blue-300 text-sm block">{term}</span>
           </div>
           <div className="p-4 text-xs text-gray-200 leading-relaxed whitespace-normal">
             {definition}
@@ -139,11 +189,13 @@ const CodeWithTooltips: React.FC<{ code: string }> = ({ code }) => {
         if (definition) {
           return <TooltipTerm key={i} term={part} definition={definition} />;
         }
-        return <span key={i}>{part}</span>;
+        return <SyntaxHighlight key={i} text={part} />;
       })}
     </>
   );
 };
+
+// --- Buttons ---
 
 const CopyButton: React.FC<{ code: string }> = ({ code }) => {
   const [copied, setCopied] = useState(false);
@@ -160,8 +212,8 @@ const CopyButton: React.FC<{ code: string }> = ({ code }) => {
       className={`
         flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200
         ${copied 
-          ? 'bg-green-500/20 text-green-400' 
-          : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
+          ? 'bg-green-500/20 text-green-600 dark:text-green-400' 
+          : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600 hover:text-black dark:hover:text-white'
         }
       `}
       title="Copy to clipboard"
@@ -248,23 +300,59 @@ const CopyToolLinkButton: React.FC<{ toolId: string }> = ({ toolId }) => {
                     : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'
                 }
             `}
-            title="Copy tool link"
+            title={copied ? "Copied!" : "Copy tool link"}
         >
             {copied ? <Check size={14} /> : <Link size={14} />}
         </button>
     );
 };
 
-export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }) => {
+// --- Skeleton Component ---
+
+const TutorialSkeleton: React.FC = () => {
+  return (
+    <div className="space-y-8 pb-20 animate-pulse">
+      {/* Header Skeleton */}
+      <div className="space-y-4 border-b border-gray-200 dark:border-gray-700 pb-8">
+        <div className="w-24 h-6 bg-gray-200 dark:bg-gray-800 rounded-full"></div>
+        <div className="flex justify-between items-center">
+          <div className="w-2/3 h-12 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+          <div className="w-24 h-10 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+        </div>
+        <div className="space-y-2 max-w-2xl pt-2">
+          <div className="w-full h-4 bg-gray-200 dark:bg-gray-800 rounded"></div>
+          <div className="w-5/6 h-4 bg-gray-200 dark:bg-gray-800 rounded"></div>
+        </div>
+      </div>
+
+      {/* TOC Skeleton */}
+      <div className="flex gap-4">
+        <div className="flex-1 h-32 bg-gray-200 dark:bg-gray-800 rounded-xl"></div>
+        <div className="w-48 h-10 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+      </div>
+
+      {/* Sections Skeleton */}
+      <div className="space-y-6">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-24 bg-gray-200 dark:bg-gray-800 rounded-2xl"></div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
+// --- Main View ---
+
+export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools, isLoading = false }) => {
   
-  // State to track which sections are expanded
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
-  // Initialize expanded state when tutorial loads or changes
   useEffect(() => {
-    // Default to all sections expanded
-    setExpandedSections(new Set(tutorial.sections.map((_, i) => i)));
-  }, [tutorial.id, tutorial.sections.length]);
+    if (tutorial) {
+       setExpandedSections(new Set(tutorial.sections.map((_, i) => i)));
+    }
+  }, [tutorial]);
 
   const toggleSection = (idx: number) => {
     const newSet = new Set(expandedSections);
@@ -284,10 +372,10 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }
     setExpandedSections(new Set());
   };
 
-  // Navigation Shortcuts Logic
+  // Navigation Shortcuts
   useEffect(() => {
     const handleNav = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
+      if (isLoading) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       if (e.key === 'ArrowRight') {
@@ -331,8 +419,12 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }
 
     window.addEventListener('keydown', handleNav);
     return () => window.removeEventListener('keydown', handleNav);
-  }, [tutorial.sections]);
+  }, [tutorial, isLoading]);
 
+
+  if (isLoading) {
+    return <TutorialSkeleton />;
+  }
 
   return (
     <div className="animate-fade-in space-y-8 pb-20">
@@ -354,7 +446,6 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }
           {tutorial.description}
         </p>
 
-        {/* Shortcut Hint */}
         <div className="flex items-center gap-2 text-xs text-gray-400 mt-4">
           <span className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 font-mono">←</span>
           <span className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 font-mono">→</span>
@@ -387,7 +478,6 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }
           </nav>
         </div>
 
-        {/* Expand/Collapse All Buttons */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={expandAll}
@@ -441,7 +531,6 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  {/* Copy Section Button */}
                   {isExpanded && (
                     <CopySectionButton 
                       title={section.title} 
@@ -455,7 +544,7 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }
                 </div>
               </div>
 
-              {/* Content (Collapsible) */}
+              {/* Content */}
               <div 
                 className={`
                   transition-all duration-300 ease-in-out overflow-hidden
@@ -468,12 +557,12 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }
                   </div>
 
                   {section.code && (
-                    <div className="relative group/code rounded-xl shadow-2xl bg-slate-900 border border-slate-700 ml-0 md:ml-[3.25rem]">
-                      <div className="flex items-center justify-between px-4 py-2 bg-slate-800 border-b border-slate-700 rounded-t-xl">
+                    <div className="relative group/code rounded-xl shadow-2xl bg-[#1e1e1e] border border-gray-700 ml-0 md:ml-[3.25rem] overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2 bg-[#2d2d2d] border-b border-gray-700">
                         <div className="flex gap-1.5">
-                          <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                          <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-                          <div className="w-3 h-3 rounded-full bg-green-500/50" />
+                          <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                          <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                          <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-1.5">
@@ -482,16 +571,27 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }
                               {section.codeLanguage || 'text'} • Hover terms
                             </span>
                           </div>
-                          <div className="h-4 w-px bg-slate-600" />
+                          <div className="h-4 w-px bg-gray-600" />
                           <CopyButton code={section.code} />
                         </div>
                       </div>
-                      <div className="p-6 overflow-x-auto pb-12">
-                        <pre className="font-mono text-sm leading-relaxed text-blue-100">
-                          <code>
-                            <CodeWithTooltips code={section.code} />
-                          </code>
-                        </pre>
+                      
+                      <div className="flex overflow-x-auto">
+                        {/* Line Numbers */}
+                        <div className="py-4 px-3 text-right bg-[#1e1e1e] border-r border-gray-800 select-none">
+                            {section.code.split('\n').map((_, i) => (
+                                <div key={i} className="text-xs text-slate-500 font-mono leading-relaxed">{i + 1}</div>
+                            ))}
+                        </div>
+                        
+                        {/* Code Content */}
+                        <div className="p-4 w-full">
+                          <pre className="font-mono text-sm leading-relaxed text-blue-100">
+                            <code>
+                              <CodeWithTooltips code={section.code} />
+                            </code>
+                          </pre>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -502,7 +602,6 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools }
         })}
       </div>
 
-      {/* Related Tools Section */}
       {relatedTools.length > 0 && (
         <div className="pt-16 mt-8 border-t border-gray-200 dark:border-gray-700">
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">

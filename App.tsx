@@ -62,7 +62,7 @@ const SidebarGlossaryItem: React.FC<{ term: string, def: string }> = ({ term, de
   );
 };
 
-function App() {
+export function App() {
   const [lang, setLang] = useState<Language>(Language.EN);
   const [selectedToolId, setSelectedToolId] = useState<ToolId | null>(null);
   const [isDark, setIsDark] = useState(true);
@@ -191,7 +191,7 @@ function App() {
             placeholder={ui.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400"
+            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400 transition-colors"
             title="Shortcut: Ctrl+Shift+S"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover/search:opacity-100 transition-opacity">
@@ -261,165 +261,137 @@ function App() {
                 <Info size={16} />
                 <span className="text-xs font-bold uppercase tracking-wider">{ui.aboutTool}</span>
               </div>
-              {isDescriptionOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              {isDescriptionOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
             </button>
             
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isDescriptionOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="px-3 pb-3">
-                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4 leading-relaxed">
-                  <HighlightText text={selectedToolData.description} highlight={searchQuery} />
-                </p>
+            <div className={`overflow-hidden transition-all duration-300 ${isDescriptionOpen ? 'max-h-40' : 'max-h-0'}`}>
+              <div className="px-4 pb-4 pt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                 <HighlightText text={selectedToolData.description} highlight={searchQuery} />
               </div>
             </div>
           </div>
 
-          {/* Related Glossary (New Section) */}
+          {/* Relevant Terms */}
           {relevantGlossaryTerms.length > 0 && (
-             <div>
-               <button 
-                 onClick={() => setIsGlossaryOpen(!isGlossaryOpen)}
-                 className="w-full flex items-center justify-between p-3 text-purple-800 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-slate-700/50 transition-colors"
-               >
-                 <div className="flex items-center gap-2">
-                   <Book size={16} />
-                   <span className="text-xs font-bold uppercase tracking-wider">Relevant Terms</span>
+            <div>
+              <button 
+                onClick={() => setIsGlossaryOpen(!isGlossaryOpen)}
+                className="w-full flex items-center justify-between p-3 text-purple-800 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Book size={16} />
+                  <span className="text-xs font-bold uppercase tracking-wider">Related Terms</span>
+                </div>
+                {isGlossaryOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+              </button>
+
+              <div className={`overflow-hidden transition-all duration-300 flex flex-col ${isGlossaryOpen ? 'max-h-60' : 'max-h-0'}`}>
+                 {/* Glossary Search */}
+                 <div className="px-3 pb-2">
+                   <input 
+                      type="text" 
+                      value={glossarySearch}
+                      onChange={(e) => setGlossarySearch(e.target.value)}
+                      placeholder="Filter terms..."
+                      className="w-full px-2 py-1 bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-700 rounded text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:border-purple-500"
+                   />
                  </div>
-                 {isGlossaryOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-               </button>
-               
-               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isGlossaryOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}>
-                 <div className="px-3 pb-2 pt-2 sticky top-0 bg-white dark:bg-slate-800 z-10 border-b border-gray-100 dark:border-slate-700">
-                    <div className="relative">
-                       <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                       <input 
-                         type="text" 
-                         value={glossarySearch}
-                         onChange={(e) => setGlossarySearch(e.target.value)}
-                         placeholder="Filter terms..."
-                         className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-blue-500 outline-none transition-colors"
-                         onClick={(e) => e.stopPropagation()}
-                       />
-                    </div>
-                 </div>
-                 <div className="px-3 pb-3 pt-2 overflow-y-auto max-h-48 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
-                    <ul className="space-y-3">
-                      {displayedGlossaryTerms.length > 0 ? (
-                        displayedGlossaryTerms.map(([term, def]) => (
-                          <SidebarGlossaryItem key={term} term={term} def={def} />
-                        ))
-                      ) : (
-                        <li className="text-xs text-gray-400 text-center py-2">No terms found</li>
-                      )}
-                    </ul>
-                 </div>
-               </div>
-             </div>
+                 
+                 <ul className="px-4 pb-4 space-y-3 overflow-y-auto custom-scrollbar">
+                  {displayedGlossaryTerms.map(([term, def]) => (
+                    <SidebarGlossaryItem key={term} term={term} def={def} />
+                  ))}
+                  {displayedGlossaryTerms.length === 0 && (
+                    <li className="text-xs text-gray-500 italic text-center py-2">No terms match filter</li>
+                  )}
+                </ul>
+              </div>
+            </div>
           )}
+        </div>
+      )}
+
+      {/* Floating Tooltip next to sidebar */}
+      {hoveredTool && !selectedToolId && (
+        <div 
+          className="fixed z-50 w-64 p-3 bg-slate-900 text-white rounded-lg shadow-xl pointer-events-none animate-fade-in hidden md:block"
+          style={{ top: hoveredTool.top, left: hoveredTool.right + 10 }}
+        >
+          <div className="font-bold text-sm mb-1">{currentData.tutorials[hoveredTool.id as ToolId].name}</div>
+          <div className="text-xs text-gray-300 leading-snug">
+            {currentData.tutorials[hoveredTool.id as ToolId].description}
+          </div>
+          {/* Arrow */}
+          <div className="absolute top-4 -left-1 w-2 h-2 bg-slate-900 transform rotate-45"></div>
         </div>
       )}
     </div>
   );
 
   return (
-    <>
-      <Layout
-        currentLang={lang}
-        onLangChange={setLang}
-        isDark={isDark}
-        onThemeToggle={() => setIsDark(!isDark)}
-        sidebarContent={SidebarLinks}
-        strings={ui}
-      >
-        {selectedToolId ? (
-          <ToolTutorialView 
-            tutorial={currentData.tutorials[selectedToolId]} 
-            ui={ui}
-            relatedTools={relatedTools}
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center min-h-[70vh] animate-fade-in">
-            <div className="text-center space-y-6 max-w-2xl mx-auto px-4">
-              <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-100 dark:border-white/5 mb-4">
-                <Bot size={56} className="text-blue-600 dark:text-blue-400" />
-              </div>
-              
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
-                {ui.welcomeTitle}
-              </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-                {ui.welcomeSubtitle}
-              </p>
-
-              <div className="pt-12 w-full">
-                <div className="flex items-center justify-center gap-4 mb-6">
-                  <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1" />
-                  <span className="text-sm font-medium text-gray-400 uppercase tracking-wider px-2">
-                    {ui.popularTools}
-                  </span>
-                  <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1" />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredTools.length > 0 ? (
-                    filteredTools.map((tool) => {
-                      const tData = currentData.tutorials[tool.id];
-                      const Icon = tool.icon;
-                      return (
-                        <button
-                          key={tool.id}
-                          onClick={() => setSelectedToolId(tool.id)}
-                          className="flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group text-left"
-                        >
-                          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                            <Icon size={24} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-gray-900 dark:text-white truncate">
-                              <HighlightText text={tData.name} highlight={searchQuery} />
-                            </h3>
-                            <div className="flex items-center text-sm text-blue-600 dark:text-blue-400 font-medium mt-1">
-                              Start Learning <ArrowRight size={14} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="col-span-full text-center py-8 text-gray-400">
-                      No tools found matching "{searchQuery}"
+    <Layout
+      currentLang={lang}
+      onLangChange={setLang}
+      isDark={isDark}
+      onThemeToggle={() => setIsDark(!isDark)}
+      sidebarContent={SidebarLinks}
+      strings={ui}
+    >
+      {selectedToolId ? (
+        <ToolTutorialView 
+          key={selectedToolId} 
+          tutorial={currentData.tutorials[selectedToolId]} 
+          ui={ui} 
+          relatedTools={relatedTools}
+        />
+      ) : (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8 animate-fade-in">
+          <div className="space-y-4 max-w-2xl">
+            <h1 className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent pb-2">
+              {ui.welcomeTitle}
+            </h1>
+            <p className="text-xl text-gray-600 dark:text-gray-300 leading-relaxed">
+              {ui.welcomeSubtitle}
+            </p>
+          </div>
+          
+          <div className="w-full max-w-4xl mt-12">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 border-b border-gray-200 dark:border-gray-800 pb-2">
+              {ui.popularTools}
+            </h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
+              {filteredTools.map((tool) => {
+                 const toolData = currentData.tutorials[tool.id];
+                 const Icon = tool.icon;
+                 return (
+                  <div 
+                    key={tool.id} 
+                    className="group p-6 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                    onClick={() => setSelectedToolId(tool.id)}
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-4 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <Icon size={24} />
                     </div>
-                  )}
-                </div>
-              </div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      <HighlightText text={toolData.name} highlight={searchQuery} />
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+                      <HighlightText text={toolData.description} highlight={searchQuery} />
+                    </p>
+                    <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-[-10px] group-hover:translate-x-0 duration-300">
+                      Start Learning <ArrowRight size={16} className="ml-1" />
+                    </div>
+                  </div>
+                 );
+              })}
             </div>
+             {filteredTools.length === 0 && (
+                <div className="text-gray-500 dark:text-gray-400 italic">No matching tools found.</div>
+            )}
           </div>
-        )}
-      </Layout>
-
-      {/* Floating Tooltip Portal */}
-      {hoveredTool && (
-        <div 
-          className="fixed z-[100] w-64 p-4 bg-slate-900 text-white rounded-lg shadow-2xl pointer-events-none animate-fade-in border border-slate-700 hidden md:block"
-          style={{ 
-            top: hoveredTool.top,
-            left: lang === Language.HE ? 'auto' : hoveredTool.right + 10,
-            right: lang === Language.HE ? (window.innerWidth - hoveredTool.right) + 260 : 'auto', // Approx calculation for RTL sidebar
-          }}
-        >
-          <div className="font-bold mb-1 text-blue-300">
-            {currentData.tutorials[hoveredTool.id as ToolId].name}
-          </div>
-          <div className="text-xs text-slate-300 leading-relaxed">
-            {currentData.tutorials[hoveredTool.id as ToolId].description}
-          </div>
-          {/* Arrow */}
-          <div 
-            className={`absolute top-4 w-3 h-3 bg-slate-900 border-l border-b border-slate-700 transform rotate-45 ${lang === Language.HE ? '-right-1.5 border-l-0 border-b-0 border-r border-t' : '-left-1.5'}`}
-          />
         </div>
       )}
-    </>
+    </Layout>
   );
 }
-
-export default App;
