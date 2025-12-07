@@ -34,7 +34,12 @@ export const GLOSSARY: Record<string, string> = {
   "Agent": "An AI system that uses an LLM to decide what actions/tools to take and in what order.",
   "PromptTemplate": "A structured way to create prompts with dynamic input variables.",
   "Runnable": "The standard interface in LangChain (LCEL) that defines how chains are invoked.",
-  "LCEL": "LangChain Expression Language: A declarative way to chain LangChain components."
+  "LCEL": "LangChain Expression Language: A declarative way to chain LangChain components.",
+  "RAG": "Retrieval Augmented Generation: Injecting external data into a prompt to improve accuracy.",
+  "VectorStore": "A database optimized for storing and searching vector embeddings of text.",
+  "Embeddings": "Numerical representations of text that capture semantic meaning.",
+  "Composer": "Cursor's multi-file editing mode (Cmd+I) that can create or modify multiple files at once.",
+  "@Docs": "Cursor context tag to index and reference external documentation URLs."
 };
 
 // Helper to create placeholder content for other languages
@@ -131,6 +136,49 @@ const response = await ai.models.generateContent({
 const algorithms = JSON.parse(response.text);
 console.log(algorithms);`,
             codeLanguage: "typescript"
+          },
+          {
+            title: "Multimodal Inputs (Vision)",
+            content: "Gemini is multimodal native. You can send images (encoded as Base64) along with text to analyze diagrams, UI screenshots, or photos.",
+            code: `import { GoogleGenAI } from "@google/genai";
+import { fs } from "fs";
+
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+// Read image file and convert to base64 (Node.js example)
+const imageBase64 = fs.readFileSync('diagram.png').toString('base64');
+
+const response = await ai.models.generateContent({
+  model: "gemini-2.5-flash",
+  contents: {
+    parts: [
+      { inlineData: { mimeType: "image/png", data: imageBase64 } },
+      { text: "Analyze this architecture diagram. What are the security risks?" }
+    ]
+  }
+});
+
+console.log(response.text);`,
+            codeLanguage: "typescript"
+          },
+          {
+            title: "Chat Sessions",
+            content: "For interactive applications, use `chats.create` to maintain history automatically. The SDK manages the context window for you.",
+            code: `const chat = ai.chats.create({
+  model: "gemini-2.5-flash",
+  config: {
+    systemInstruction: "You are a helpful travel assistant.",
+  }
+});
+
+// First message
+let response = await chat.sendMessage({ message: "I want to visit Tokyo." });
+console.log(response.text); 
+
+// Second message (AI remembers context)
+response = await chat.sendMessage({ message: "What is the weather like there in March?" });
+console.log(response.text); // Will discuss Tokyo's weather`,
+            codeLanguage: "typescript"
           }
         ]
       },
@@ -161,6 +209,26 @@ Cursor: "I found authentication references in:
 
 The main logic seems to be in AuthProvider.tsx using JWT tokens..."`,
             codeLanguage: "markdown"
+          },
+          {
+            title: "Composer Mode (Cmd+I)",
+            content: "Composer is a powerful mode for multi-file edits. Press Cmd+I to open the Composer window. You can ask it to build entire features that span multiple files.",
+            code: `User (Cmd+I): "Create a new 'Blog' feature. 
+1. Add a BlogPost model in schema.prisma.
+2. Create an API route in /app/api/blog/route.ts.
+3. Create a frontend component in /components/BlogList.tsx."
+
+// Composer will generate plans for all 3 files and apply them sequentially.`,
+            codeLanguage: "text"
+          },
+          {
+            title: "Documentation Context (@Docs)",
+            content: "Cursor can index external documentation. Type '@Docs' in chat, paste a URL (like the React or Stripe docs), and Cursor will learn it to provide up-to-date answers.",
+            code: `User: "@Docs (React Router 6) How do I use the new data loaders?"
+
+// Cursor reads the indexed docs and explains the specific API 
+// instead of hallucinating older versions.`,
+            codeLanguage: "text"
           },
           {
             title: "Fixing Terminal Errors",
@@ -195,6 +263,30 @@ Requirements:
 2. Replace all useSelector hooks with useContext.
 3. Ensure types are preserved.`,
             codeLanguage: "markdown"
+          },
+          {
+            title: "Style Guidelines",
+            content: "When asking Claude to write code, it helps to provide a <style_guide> block to ensure the output matches your team's conventions.",
+            code: `<style_guide>
+- Use TypeScript with strict mode.
+- Prefer functional components over classes.
+- Use Tailwind CSS for styling.
+- Use 'zod' for validation.
+</style_guide>
+
+Task: Create a registration form component.`,
+            codeLanguage: "markdown"
+          },
+          {
+            title: "Explaining Legacy Code",
+            content: "Claude has a large context window (200k tokens). You can paste entire legacy files and ask for a summary or logic explanation.",
+            code: `Prompt: "I have pasted a 2000-line legacy Perl script below. 
+Please explain the high-level data flow and identify any potential security vulnerabilities in the input handling."
+
+<script>
+... (legacy code) ...
+</script>`,
+            codeLanguage: "text"
           }
         ]
       },
@@ -220,6 +312,52 @@ df = pd.read_csv('/mnt/data/sales_data.csv')
 regional_profit = df.groupby('Region')['Profit'].sum()
 regional_profit.plot(kind='bar')`,
             codeLanguage: "python"
+          },
+          {
+            title: "SQL Query Generation",
+            content: "ChatGPT is excellent at converting natural language to complex SQL queries. Just provide your schema structure.",
+            code: `Prompt: "Given a table 'Orders' (id, user_id, amount, created_at) and 'Users' (id, email, country), 
+write a PostgreSQL query to find the top 5 users by total spend in 2024 who are from France."
+
+-- Output
+SELECT u.email, SUM(o.amount) as total_spend
+FROM Users u
+JOIN Orders o ON u.id = o.user_id
+WHERE u.country = 'France' 
+  AND o.created_at >= '2024-01-01' 
+  AND o.created_at < '2025-01-01'
+GROUP BY u.id
+ORDER BY total_spend DESC
+LIMIT 5;`,
+            codeLanguage: "sql"
+          },
+          {
+            title: "Language Conversion",
+            content: "Easily translate code logic from one language to another, for example, porting a Python script to TypeScript.",
+            code: `Prompt: "Convert this Python dictionary logic to a TypeScript interface and object."
+
+Python:
+user = {
+  "name": "Noam",
+  "meta": { "login_count": 5, "active": True }
+}
+
+TypeScript Output:
+interface UserMeta {
+  login_count: number;
+  active: boolean;
+}
+
+interface User {
+  name: string;
+  meta: UserMeta;
+}
+
+const user: User = {
+  name: "Noam",
+  meta: { login_count: 5, active: true }
+};`,
+            codeLanguage: "typescript"
           }
         ]
       },
@@ -247,6 +385,22 @@ regional_profit.plot(kind='bar')`,
  */
 // Copilot will autocomplete the function body here...`,
             codeLanguage: "javascript"
+          },
+          {
+            title: "Slash Commands",
+            content: "In the chat window, use slash commands to quickly perform common tasks without typing long prompts.",
+            code: `/fix - Analyze the selected code for bugs and propose a fix.
+/explain - Explain how the selected code works in plain English.
+/tests - Generate unit tests for the selected function.
+/doc - Generate documentation comments for the symbol.`,
+            codeLanguage: "text"
+          },
+          {
+            title: "Smart Commit Messages",
+            content: "In the Source Control tab, click the 'Sparkle' icon next to the commit message box. Copilot analyzes your staged changes and generates a descriptive commit message.",
+            code: `// Copilot generates:
+"feat(auth): implement JWT token refresh logic and update login schema"`,
+            codeLanguage: "text"
           }
         ]
       },
@@ -289,6 +443,32 @@ describe('getUser', () => {
   });
 });`,
             codeLanguage: "typescript"
+          },
+          {
+            title: "CLI Assistant",
+            content: "GitHub Copilot CLI helps you write complex shell commands. If you forget a `ffmpeg` or `git` command, ask the CLI.",
+            code: `$ gh copilot suggest "Convert video.mp4 to a gif with 10fps"
+
+# Suggestion:
+ffmpeg -i video.mp4 -vf "fps=10,scale=320:-1:flags=lanczos" -c:v gif output.gif
+
+# Options:
+# [E]xecute command
+# [R]evise command
+# [C]opy command`,
+            codeLanguage: "bash"
+          },
+          {
+            title: "Docstring Generation",
+            content: "Copilot can generate JSDoc or Python docstrings automatically. Start typing `/**` above a function, or use the Chat command `/doc`.",
+            code: `/**
+ * Retries an async operation with exponential backoff.
+ * @param {Function} fn - The async function to retry.
+ * @param {number} retries - Max number of retries.
+ * @returns {Promise<any>}
+ */
+async function retry(fn, retries = 3) { ... }`,
+            codeLanguage: "javascript"
           }
         ]
       },
@@ -330,6 +510,50 @@ const chain = prompt.pipe(model).pipe(outputParser);
 // Run the Chain
 const result = await chain.invoke({ topic: "bears" });
 console.log(result);`,
+            codeLanguage: "typescript"
+          },
+          {
+            title: "RAG (Retrieval Augmented Generation)",
+            content: "RAG allows the LLM to answer questions about your private data. You load documents, split them, embed them, and store them in a VectorStore.",
+            code: `import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { OpenAIEmbeddings } from "@langchain/openai";
+
+// 1. Create Vector Store from texts
+const vectorStore = await MemoryVectorStore.fromTexts(
+  ["Noam's favorite color is blue.", "The project deadline is Friday."],
+  [{ id: 1 }, { id: 2 }],
+  new OpenAIEmbeddings()
+);
+
+// 2. Create a Retriever
+const retriever = vectorStore.asRetriever();
+
+// 3. Chain retrieval with generation
+const chain = RunnableSequence.from([
+  {
+    context: retriever.pipe(formatDocumentsAsString),
+    question: new RunnablePassthrough()
+  },
+  prompt,
+  model,
+  new StringOutputParser()
+]);
+
+await chain.invoke("What is Noam's favorite color?");`,
+            codeLanguage: "typescript"
+          },
+          {
+            title: "Conversation Memory",
+            content: "Standard LLM calls are stateless. To build a chatbot, you need to manage Memory (History) and pass it back to the model with every new question.",
+            code: `import { BufferMemory } from "langchain/memory";
+import { ConversationChain } from "langchain/chains";
+
+const memory = new BufferMemory();
+const chain = new ConversationChain({ llm: model, memory: memory });
+
+await chain.call({ input: "Hi! I'm Noam." });
+const res = await chain.call({ input: "What's my name?" });
+console.log(res.response); // "Your name is Noam."`,
             codeLanguage: "typescript"
           },
           {
