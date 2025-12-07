@@ -348,9 +348,11 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools, 
   
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
+  // Reset scroll and expanded sections when tutorial changes
   useEffect(() => {
     if (tutorial) {
        setExpandedSections(new Set(tutorial.sections.map((_, i) => i)));
+       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [tutorial]);
 
@@ -466,8 +468,16 @@ export const ToolTutorialView: React.FC<Props> = ({ tutorial, ui, relatedTools, 
                 href={`#section-${idx}`}
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById(`section-${idx}`)?.scrollIntoView({ behavior: 'smooth' });
-                  setExpandedSections(prev => new Set(prev).add(idx));
+                  // Expand the section if it's not already expanded
+                  setExpandedSections(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(idx);
+                    return newSet;
+                  });
+                  // Scroll to the section with a slight delay to allow expansion rendering
+                  setTimeout(() => {
+                    document.getElementById(`section-${idx}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 100);
                 }}
                 className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1"
               >

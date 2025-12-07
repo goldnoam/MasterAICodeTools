@@ -62,7 +62,7 @@ const SidebarGlossaryItem: React.FC<{ term: string, def: string }> = ({ term, de
   );
 };
 
-export function App() {
+export default function App() {
   const [lang, setLang] = useState<Language>(Language.EN);
   const [selectedToolId, setSelectedToolId] = useState<ToolId | null>(null);
   const [isDark, setIsDark] = useState(true);
